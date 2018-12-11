@@ -23,7 +23,8 @@ sed_arg="s/hostname=.*/hostname=revere-lynx-x86_64-1/; \
   s/user_password=.*/user_password=( ${user_password} )/; \
   s/lan_dev=.*/lan_dev=enp8s0/; \
   s/eth_dhcp_client_dev=.*/eth_dhcp_client_dev=( enp10s0f3u3 wlp6s0 )/; \
-  s%hdd=.*%hdd=${hdd}%"
+  s%hdd=.*%hdd=${hdd}%; \
+  s/  uefi=true/  uefi=false/"
 sed -i "$sed_arg" install-conf.sh
 
 sed_arg="s/subnet=.*/subnet=10.44.44.0/; \
