@@ -19,10 +19,11 @@ cp setup-available/setup-chroot-01-rtkernel.sh \
    .
 
 sed_arg="s/hostname=.*/hostname=revere-lynx-x86_64-1/; \
+  s/user=.*/user=cfsd/; \
   s/root_password=.*/root_password=${root_password}/; \
   s/user_password=.*/user_password=( ${user_password} )/; \
-  s/lan_dev=.*/lan_dev=enp8s0/; \
-  s/eth_dhcp_client_dev=.*/eth_dhcp_client_dev=( enp10s0f3u3 wlp6s0 )/; \
+  s/lan_dev=.*/lan_dev=enp10s0/; \
+  s/eth_dhcp_client_dev=.*/eth_dhcp_client_dev=( enp3s0f0u1 wlp8s0 )/; \
   s%hdd=.*%hdd=${hdd}%; \
   s/  uefi=true/  uefi=false/"
 sed -i "$sed_arg" install-conf.sh
@@ -35,6 +36,9 @@ sed -i "$sed_arg" setup-post-01-router.sh
 sed_arg="s/dev=.*/dev=( can0 can1 )/; \
        	s/bitrate=.*/bitrate=( 500000 1000000 )/"
 sed -i "$sed_arg" setup-post-09-socketcan.sh
+
+sed_arg="s/iwlwifi-8000C-16.ucode/iwlwifi-7265D-29.ucode/g"
+sed -i "$sed_arg" setup-chroot-01-rtkernel.sh
 
 chmod +x *.sh
 
