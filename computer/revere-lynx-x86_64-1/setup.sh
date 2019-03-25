@@ -19,7 +19,7 @@ cp setup-available/setup-chroot-01-rtkernel.sh \
    .
 
 sed_arg="s/hostname=.*/hostname=revere-lynx-x86_64-1/; \
-  s/user=.*/user=cfsd/; \
+  s/user=( revere )/user=( cfsd )/; \
   s/root_password=.*/root_password=${root_password}/; \
   s/user_password=.*/user_password=( ${user_password} )/; \
   s/lan_dev=.*/lan_dev=enp10s0/; \
