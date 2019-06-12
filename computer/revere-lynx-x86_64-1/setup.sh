@@ -22,8 +22,8 @@ sed_arg="s/hostname=.*/hostname=revere-lynx-x86_64-1/; \
   s/user=( revere )/user=( cfsd )/; \
   s/root_password=.*/root_password=${root_password}/; \
   s/user_password=.*/user_password=( ${user_password} )/; \
-  s/lan_dev=.*/lan_dev=enp10s0/; \
-  s/eth_dhcp_client_dev=.*/eth_dhcp_client_dev=( enp3s0f0u1 wlp8s0 )/; \
+  s/lan_dev=.*/lan_dev=enp9s0/; \
+  s/eth_dhcp_client_dev=.*/eth_dhcp_client_dev=( enp3s0f0u1 wlp7s0 )/; \
   s%hdd=.*%hdd=${hdd}%; \
   s/  uefi=true/  uefi=false/"
 sed -i "$sed_arg" install-conf.sh
