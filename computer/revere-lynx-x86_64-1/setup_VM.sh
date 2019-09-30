@@ -6,7 +6,7 @@ read root_password
 echo Revere user password?
 read user_password
 
-hdd=/dev/`lsblk | grep disk | grep 465.8G | cut -d ' ' -f1`
+hdd=/dev/`lsblk | grep disk | grep 30G | cut -d ' ' -f1`
 
 wget https://raw.github.com/chalmers-revere/opendlv.os/master/x86/get.sh
 sh get.sh
