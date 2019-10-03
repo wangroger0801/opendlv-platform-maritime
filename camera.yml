@@ -1,0 +1,156 @@
+version: '2.3'
+
+# These services run on Apollo (Intel Core).
+services:
+    ###########################################################################
+    # opendlv-vehicle-view on 105.
+    vehicle-view:
+        container_name: opendlv-vehicle-view
+        image: chalmersrevere/opendlv-vehicle-view-multi:v0.0.60
+        cpuset: "1"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/rtp:/opt/vehicle-view/recordings
+        - /var/run/docker.sock:/var/run/docker.sock
+        environment:
+        - OD4SESSION_CID=106
+        - PLAYBACK_OD4SESSION_CID=205
+        - OPENDLV_VEHICLE_VIEW_PLATFORM=Snowfox
+        ports:
+        - "8081:8081"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -1 node index.js"
+        runtime: runc
+
+    ###########################################################################
+    # Relay and downsample Envelopes from CID 106 (local CID session) to CID 105 (for opendlv-vehicle-view).
+    relay-downsample-106-105:
+        container_name: relay-downsample-106-105
+        image: chrberger/cluon-relay-multi:v0.0.4
+        cpuset: "2"
+        restart: always
+        network_mode: "host"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -5 /usr/bin/cluon-relay --cid-from=106 --cid-to=105 --downsample=19:10,1046:10"
+        runtime: runc
+
+    ###########################################################################
+    # Relay cluon.data.RecorderCommand.
+    relay-recordercommand-105-106:
+        container_name: relay-recordercommand-105-106
+        image: chrberger/cluon-relay-multi:v0.0.4
+        cpuset: "2"
+        restart: always
+        network_mode: "host"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -7 /usr/bin/cluon-relay --cid-from=105 --cid-to=106 --keep=11"
+        runtime: runc
+
+    ###########################################################################
+    # Dump all containers from CID 106 on request.
+    record-106:
+        container_name: record-106
+        image: chrberger/cluon-record-multi:v0.0.1
+        cpuset: "2"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/upload:/recordings
+        working_dir: /recordings
+        command: "--remote --recsuffix=-all --cid=106"
+        runtime: runc
+
+
+
+    ###########################################################################
+    # Axis camera including recording functionality with remote start/stop. 
+    # from https://github.com/chalmers-revere/opendlv-platform-snowfox/blob/2019-07-08/Brick.yml
+    dev-camera-axis0:
+        container_name: dev-camera-axis0
+        image: chalmersrevere/opendlv-device-camera-rtp-amd64:2file-local
+        cpuset: "5"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/rtp:/recordings
+        working_dir: /recordings
+        cap_add:
+        - SYS_NICE
+        command: "nice -n -8 /usr/bin/opendlv-device-camera-rtp --url=rtsp://169.254.49.133/axis-media/media.amp\\?camera=1 --cid=106 --id=0 --client-port-udp-a=35000 --recsuffix=-all --verbose"
+        runtime: runc
+
+    ###########################################################################
+    # Axis camera including recording functionality with remote start/stop.
+
+#    dev-camera-axis0:
+#        container_name: dev-camera-axis0
+#        image: chalmersrevere/opendlv-device-camera-mjpegoverhttp-multi:v0.0.3
+#        cpuset: "6"
+#        restart: always
+#        ipc: "host"
+#        network_mode: "host"
+#        volumes:
+#        - /tmp:/tmp
+#        - $HOME/recordings/lossless:/recordings
+#        working_dir: /recordings
+#        cap_add:
+#        - SYS_NICE
+#        entrypoint: ""
+#        command: "nice -n -8 /usr/bin/opendlv-device-camera-mjpegoverhttp --url=http://169.254.49.133/axis-cgi/mjpg/video.cgi\\?channel=0\\&.mjpg\\&compression=0 --width=1280 --height=720 --name.i420=axis0.i420 --name.argb=axis0.argb --remote --recsuffix=-axis0-jpeg --skip.argb --cid=106 --id=0"
+#        runtime: runc
+
+
+
+#    i420toolbox:
+#        container_name: i420toolbox
+#        image: chalmersrevere/i420toolbox-multi:v0.0.2
+#        cpuset: "6"
+#        restart: always
+#        depends_on:
+#        - dev-camera-rtp0
+#        ipc: "host"
+#        volumes:
+#        - /tmp:/tmp
+#        - $HOME/recordings/lossy:/data
+#        command: "--in=axis0.i420 --in.width=1280 --in.height=720 --crop.x=320 --crop.y=120 --crop.width=640 --crop.height=480 --out=axisds0.i420"
+#
+#    video-h264-encoder-amd64:
+#        container_name: h264enc
+#        build:
+#            context: https://github.com/chalmers-revere/opendlv-video-h264-encoder.git#v0.0.2
+#            dockerfile: Dockerfile.amd64
+#        restart: always
+#        cpuset: "6"
+#        depends_on:
+#        - dev-camera-axis0
+#        - i420toolbox
+#        network_mode: "host"
+#        ipc: "host"
+#        volumes:
+#        - /tmp:/tmp
+#        command: "--name=axisds0.i420 --width=640 --height=480 --bitrate=4895294 --bitrate_max=5000000 --gop=1 --rc_mode=1 --ecomplexity=2 --sps_pps_strategy=6 --num_ref_frame=11 --ssei=1 --prefix_nal=1 --entropy_coding=0 --frame_skip=0 --qp_max=38 --qp_min=17 --long_term_ref=0 --loop_filter=0 --denoise=1 --background_detection=0 --adaptive_quant=0 --frame_cropping=1 --scene_change_detect=1 --padding=1 --cid=105 --id=0"
+
+
+#    video-h264-recorder-amd64:
+#        build:
+#            context: https://github.com/chalmers-revere/opendlv-video-h264-recorder.git
+#            dockerfile: Dockerfile.amd64    
+#        image: video-h264-recorder-amd64:latest
+#        restart: on-failure
+#        network_mode: "host"
+#        ipc: "host"
+#        depends_on:
+#        - video-h264-encoder-amd64
+#        working_dir: /data
+#        volumes:
+#        - /tmp:/tmp
+#        - $HOME/recordings/lossy:/data
+#        command: "--cid=105 --name=axisds0.i420 --width=640 --height=480 --recsuffix=-video+envelopes"
+
