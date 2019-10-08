@@ -1,0 +1,73 @@
+version: '2.3'
+
+# These services run the axis camera recordings and share frames to the shared memory. limited cameras can be recorded at the same time due to the heavy load. 
+services:
+    ###########################################################################
+    # Axis camera including recording functionality with remote start/stop.
+    # the recordins from here cannot be replayed by vehicle view
+    # use the remote flag to diable recording
+    dev-camera-axis0:
+        container_name: dev-camera-axis0
+        image: chalmersrevere/opendlv-device-camera-mjpegoverhttp-multi:v0.0.3
+        #cpuset: "6"
+        restart: always
+        ipc: "host"
+        network_mode: "host"
+        volumes:
+        - /tmp:/tmp
+        - $HOME/recordings/lossless:/recordings
+        working_dir: /recordings
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -8 /usr/bin/opendlv-device-camera-mjpegoverhttp --url=http://169.254.49.133/axis-cgi/mjpg/video.cgi\\?channel=0\\&.mjpg\\&compression=0 --width=1280 --height=720 --name.i420=axis0.i420 --name.argb=axis0.argb --recsuffix=-axis0-jpeg --skip.argb --cid=106 --id=0"
+        runtime: runc
+    
+    ###########################################################################
+    # i420toolbox for cropping the images
+    i420toolbox:
+        container_name: i420toolbox
+        image: chalmersrevere/i420toolbox-multi:v0.0.2
+        cpuset: "6"
+        restart: always
+        depends_on:
+        - dev-camera-axis0
+        ipc: "host"
+        volumes:
+        - /tmp:/tmp
+        - $HOME/recordings/lossy:/data
+        command: "--in=axis0.i420 --in.width=1280 --in.height=720 --crop.x=320 --crop.y=120 --crop.width=640 --crop.height=480 --out=axisds0.i420"
+
+#    video-h264-encoder-amd64:
+#        container_name: h264enc
+#        build:
+#            context: https://github.com/chalmers-revere/opendlv-video-h264-encoder.git#v0.0.2
+#            dockerfile: Dockerfile.amd64
+#        restart: always
+#        cpuset: "6"
+#        depends_on:
+#        - dev-camera-axis0
+#        - i420toolbox
+#        network_mode: "host"
+#        ipc: "host"
+#        volumes:
+#        - /tmp:/tmp
+#        command: "--name=axisds0.i420 --width=640 --height=480 --bitrate=4895294 --bitrate_max=5000000 --gop=1 --rc_mode=1 --ecomplexity=2 --sps_pps_strategy=6 --num_ref_frame=11 --ssei=1 --prefix_nal=1 --entropy_coding=0 --frame_skip=0 --qp_max=38 --qp_min=17 --long_term_ref=0 --loop_filter=0 --denoise=1 --background_detection=0 --adaptive_quant=0 --frame_cropping=1 --scene_change_detect=1 --padding=1 --cid=105 --id=0"
+    
+    ###########################################################################
+    # the recordings here canbe replayed
+    video-h264-recorder-amd64:
+        build:
+            context: https://github.com/chalmers-revere/opendlv-video-h264-recorder.git
+            dockerfile: Dockerfile.amd64    
+        image: video-h264-recorder-amd64:latest
+        restart: on-failure
+        network_mode: "host"
+        ipc: "host"
+        depends_on:
+        - i420toolbox
+        working_dir: /data
+        volumes:
+        - /tmp:/tmp
+        - $HOME/recordings/lossy:/data
+        command: "--cid=105 --name=axisds0.i420 --width=640 --height=480 --recsuffix=-video+envelopes"

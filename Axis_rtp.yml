@@ -1,0 +1,23 @@
+version: '2.3'
+
+# These services run on maritime (Intel Core).
+services:
+
+    ###########################################################################
+    # Axis camera including recording functionality with remote start/stop. 
+    # from https://github.com/chalmers-revere/opendlv-platform-snowfox/blob/2019-07-08/Brick.yml
+    # it directly get the compressed frame from the camera main unit and save them into rec file.
+    dev-camera-axis0:
+        container_name: dev-camera-axis0
+        image: chalmersrevere/opendlv-device-camera-rtp-amd64:2file-local
+        #cpuset: "5"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/rtp:/recordings
+        working_dir: /recordings
+        cap_add:
+        - SYS_NICE
+        command: "nice -n -8 /usr/bin/opendlv-device-camera-rtp --url=rtsp://169.254.49.133/axis-media/media.amp\\?camera=1 --cid=106 --id=0 --client-port-udp-a=35000 --recsuffix=-all --verbose"
+        runtime: runc
+

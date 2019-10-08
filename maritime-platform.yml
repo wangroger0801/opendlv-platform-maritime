@@ -1,0 +1,71 @@
+version: '2.3'
+
+# These services run on maritime (Intel Core).
+services:
+    ###########################################################################
+    # opendlv-vehicle-view on 105.
+    vehicle-view:
+        container_name: opendlv-vehicle-view
+        image: chalmersrevere/opendlv-vehicle-view-multi:v0.0.60
+        #cpuset: "1"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/rtp:/opt/vehicle-view/recordings
+        - /var/run/docker.sock:/var/run/docker.sock
+        environment:
+        - OD4SESSION_CID=106
+        - PLAYBACK_OD4SESSION_CID=205
+        - OPENDLV_VEHICLE_VIEW_PLATFORM=Snowfox
+        ports:
+        - "8081:8081"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -1 node index.js"
+        runtime: runc
+
+    ###########################################################################
+    # Relay and downsample Envelopes from CID 106 (local CID session) to CID 105 (for opendlv-vehicle-view).
+    # it downsample the data frequency for the messages for monitoring the status over 4G
+    relay-downsample-106-105:
+        container_name: relay-downsample-106-105
+        image: chrberger/cluon-relay-multi:v0.0.4
+        #cpuset: "2"
+        restart: always
+        network_mode: "host"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -5 /usr/bin/cluon-relay --cid-from=106 --cid-to=105 --downsample=19:10,1046:10"
+        runtime: runc
+
+    ###########################################################################
+    # Relay cluon.data.RecorderCommand.
+    relay-recordercommand-105-106:
+        container_name: relay-recordercommand-105-106
+        image: chrberger/cluon-relay-multi:v0.0.4
+        #cpuset: "2"
+        restart: always
+        network_mode: "host"
+        cap_add:
+        - SYS_NICE
+        entrypoint: ""
+        command: "nice -n -7 /usr/bin/cluon-relay --cid-from=105 --cid-to=106 --keep=11"
+        runtime: runc
+
+    ###########################################################################
+    # Dump all containers from CID 106 on request.
+    record-106:
+        container_name: record-106
+        image: chrberger/cluon-record-multi:v0.0.1
+        #cpuset: "2"
+        restart: always
+        network_mode: "host"
+        volumes:
+        - $HOME/recordings/upload:/recordings
+        working_dir: /recordings
+        command: "--remote --recsuffix=-all --cid=106"
+        runtime: runc
+
+
