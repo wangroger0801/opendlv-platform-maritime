@@ -9,7 +9,7 @@ services:
     # it directly get the compressed frame from the camera main unit and save them into rec file.
     dev-camera-axis0:
         container_name: dev-camera-axis0
-        image: chalmersrevere/opendlv-device-camera-rtp-amd64:2file-local
+        image: chalmersrevere/opendlv-device-camera-rtp-amd64:2file
         #cpuset: "5"
         restart: always
         network_mode: "host"
